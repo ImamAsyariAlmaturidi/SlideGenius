@@ -1,101 +1,265 @@
+"use client";
+import { toast } from "sonner";
 import Image from "next/image";
+import Link from "next/link";
+import { ChevronDown, Heart, Send, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { main } from "./action/ai";
+import { useState, useEffect } from "react";
+import { Loader } from "@/components/ui/loader";
+import { LoadingDots } from "@/components/loading-dots";
+import { JsonViewer } from "@/components/json-viewer";
+
+type Slide = {
+  heading: string;
+  bullet_points: string[];
+  key_message: string;
+  content: string;
+  image_keywords: string[];
+};
+
+type PresentationData = {
+  title: string;
+  slides: Slide[];
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [resultJson, setResultJson] = useState<PresentationData | null>(null);
+  const [inputPrompt, setInputPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [filename, setFilename] = useState<string | null>("");
+  const handleDownload = (filename: string) => {
+    const url = `/api/download/${filename}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    if (loading) {
+      const timer = setInterval(() => {
+        setProgress((oldProgress) => {
+          if (oldProgress === 100) {
+            clearInterval(timer);
+            return 100;
+          }
+          const diff = Math.random() * 10;
+          return Math.min(oldProgress + diff, 100);
+        });
+      }, 500);
+
+      return () => {
+        clearInterval(timer);
+      };
+    }
+  }, [loading]);
+
+  async function handlePrompt() {
+    if (!inputPrompt.trim()) return;
+
+    if (inputPrompt.trim().split(/\s+/).length < 3) {
+      return toast.warning("Input must be atleast 3 words!", {
+        description:
+          "For the best results, input at least three words with a subject, verb, and object. Example: 'A history about Hitler🗿'",
+        position: "top-center",
+        style: {
+          backgroundColor: "green",
+          color: "#000",
+          border: "1px solid black",
+          fontWeight: "bold",
+          textAlign: "center",
+        },
+      });
+    }
+
+    setLoading(true);
+    setLoadingStage("Generating presentation...");
+    setProgress(0);
+
+    const promptValue = inputPrompt;
+    setInputPrompt("");
+
+    try {
+      // Simulate different loading stages for better UX
+      setTimeout(() => setLoadingStage("Analyzing topic..."), 1000);
+      setTimeout(() => setLoadingStage("Creating slides..."), 3000);
+      setTimeout(() => setLoadingStage("Finalizing content..."), 5000);
+
+      const result = await main(promptValue);
+      if (result.message) {
+        return toast.error(result.message, {
+          description: "Prompting failed, please try again",
+          position: "top-center",
+          style: {
+            backgroundColor: "red",
+            color: "#000",
+            border: "1px solid black",
+            fontWeight: "bold",
+            textAlign: "center",
+          },
+        });
+      }
+      setResultJson(result.parsedOutput);
+      setFilename(result.filename);
+    } catch (error) {
+      console.error("Error generating slides:", error);
+    } finally {
+      setLoading(false);
+      setLoadingStage(null);
+      setProgress(100);
+    }
+  }
+
+  return (
+    <div className="h-screen bg-black text-white flex flex-col items-center px-4 py-12">
+      <div className="w-full max-w-3xl flex flex-col flex-grow">
+        {/* Header */}
+        <Header />
+
+        {/* Feedback Section */}
+        <FeedbackSection />
+
+        {/* Chat Interface */}
+        <ChatMessage message="Hello! What topic do you have on your mind today?" />
+
+        {/* Loading State */}
+        {loading && (
+          <div className="mb-6 bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <Loader className="border-green-500" size="lg" />
+              <p className="text-zinc-300">{loadingStage}</p>
+              <Progress value={progress} className="w-full max-w-md" />
+            </div>
+          </div>
+        )}
+
+        {/* JSON Result */}
+
+        {resultJson && !loading && (
+          <div className="flex flex-col min-h-0">
+            <div className="mb-6 max-h-[400px] overflow-auto  border-zinc-700 rounded-lg">
+              <JsonViewer data={resultJson} />
+            </div>
+          </div>
+        )}
+
+        {/* Input Field (Dibuat agar berada di bawah) */}
+        <div className="mt-auto w-full">
+          <div>
+            {filename && (
+              <Button
+                variant={"secondary"}
+                onClick={() => handleDownload(filename)}
+                className="my-5 w-full"
+              >
+                Download File
+              </Button>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              placeholder="Write the topic or instructions here"
+              value={inputPrompt}
+              onChange={(e) => setInputPrompt(e.target.value)}
+              className="w-full bg-transparent border-green-800 border rounded-md py-6 px-4 focus-visible:ring-green-500"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handlePrompt();
+                }
+              }}
+              disabled={loading}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <Button
+              onClick={handlePrompt}
+              size="icon"
+              disabled={loading || !inputPrompt.trim()}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-transparent ${
+                loading || !inputPrompt.trim()
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-zinc-800"
+              }`}
+            >
+              {loading ? (
+                <LoadingDots color="bg-green-500" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
+
+const Header = () => (
+  <div className="mb-8 text-center">
+    <h1 className="text-4xl md:text-5xl font-bold mb-2">
+      <span className="text-green-500">SlideGenius by Imam A'syari</span>{" "}
+    </h1>
+    <p className="text-xl md:text-2xl mt-4">
+      Converse, create, and improve your next PowerPoint by SlideGenius
+    </p>
+  </div>
+);
+
+const FeedbackSection = () => (
+  <div className="p-2 mb-4 rounded-md bg-green-950 border border-green-900">
+    <p className="text-center">
+      If you like SlideGenius, please consider leaving a heart{" "}
+      <Heart className="inline h-5 w-5 text-red-500 fill-red-500" /> on the
+      <Link href="#" className="text-blue-400 hover:underline">
+        {" "}
+        Hugging Face Space{" "}
+      </Link>
+      or a star{" "}
+      <Star className="inline h-5 w-5 text-yellow-400 fill-yellow-400" /> on
+      <Link
+        href="https://github.com/ImamAsyariAlmaturidi"
+        className="text-blue-400 hover:underline"
+      >
+        {" "}
+        GitHub{" "}
+      </Link>
+      or checking out my
+      <Link
+        href="https://www.linkedin.com/in/imam-a-syari-almaturidi-21b885323/"
+        className="text-blue-400 hover:underline"
+      >
+        {" "}
+        LinkedIn{" "}
+      </Link>{" "}
+      is appreciated.
+    </p>
+  </div>
+);
+
+const ChatMessage = ({ message }: { message: string }) => (
+  <div className="flex items-start gap-3 mb-8">
+    <div className="bg-green-500 p-2 rounded-md">
+      <Image
+        src="/placeholder.svg?height=24&width=24"
+        width={24}
+        height={24}
+        alt="Bot icon"
+        className="h-6 w-6"
+      />
+    </div>
+    <div className="bg-zinc-900 p-4 rounded-md border border-zinc-700 flex-1">
+      <p>{message}</p>
+    </div>
+  </div>
+);
