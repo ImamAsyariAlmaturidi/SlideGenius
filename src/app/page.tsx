@@ -16,7 +16,7 @@ import { useState, useEffect } from "react";
 import { Loader } from "@/components/ui/loader";
 import { LoadingDots } from "@/components/loading-dots";
 import { JsonViewer } from "@/components/json-viewer";
-
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 type Slide = {
   heading: string;
   bullet_points: string[];
@@ -38,7 +38,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [filename, setFilename] = useState<string | null>("");
   const handleDownload = (filename: string) => {
-    const url = `/api/download/${filename}`;
+    const url = `${BASE_URL}/api/download/${filename}`;
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", filename);

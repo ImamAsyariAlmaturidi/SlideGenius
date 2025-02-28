@@ -5,8 +5,8 @@ import { StructuredOutputParser } from "langchain/output_parsers";
 import PptxGenJS from "pptxgenjs";
 const GOOGLE_API_KEY = "AIzaSyBZx12vyE9aHZsdj0ea-zPlihhinW40LII";
 const model = new ChatGoogleGenerativeAI({
-  temperature: 1,
-  model: "gemini-2.0-pro-exp-02-05",
+  temperature: 0.3,
+  model: "gemini-2.0-flash",
   apiKey: GOOGLE_API_KEY,
 });
 
@@ -117,7 +117,7 @@ const parser = StructuredOutputParser.fromNamesAndDescriptions({
 // Step 2: Define a structured prompt with format instructions
 const prompt = new PromptTemplate({
   template: `You are an AI assistant that generates structured JSON for PowerPoint slides.
-    Generate **at least 7 slides** for a presentation on "{topic}".
+    Generate **at least 5 slides** for a presentation on "{topic}".
   
     Ensure:
     - The output must be in valid JSON format, without any additional characters (e.g., backticks or quotes around the entire JSON).
