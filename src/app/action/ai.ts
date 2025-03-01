@@ -10,6 +10,7 @@ const model = new ChatGoogleGenerativeAI({
   apiKey: GOOGLE_API_KEY,
 });
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 type Slide = {
   heading: string;
   bullet_points: string[];
@@ -98,7 +99,7 @@ export async function createPPT(slidesData: PresentationData) {
   formData.append("file", file);
 
   try {
-    const response = await fetch("http://localhost:3000/api/upload", {
+    const response = await fetch(`${BASE_URL}/api/upload`, {
       method: "POST",
       body: formData,
     });
