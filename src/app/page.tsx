@@ -36,12 +36,13 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [filename, setFilename] = useState<string | null>("");
-  const handleDownload = (filename: string) => {
-    const url = `${BASE_URL}/api/download/${filename}`;
+  const [url, setUrl] = useState<string>("");
+  const handleDownload = () => {
+    const url =
+      "https://storage.googleapis.com/saas-jruhub/uploads/1740870873523-presentation.pptx";
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", filename);
+    link.setAttribute("download", "presentation.pptx"); // Nama file saat didownload
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -112,7 +113,8 @@ export default function Home() {
         });
       }
       setResultJson(result.parsedOutput);
-      setFilename(result.filename);
+
+      setUrl(result.filename);
     } catch (error) {
       console.error("Error generating slides:", error);
     } finally {
@@ -158,10 +160,10 @@ export default function Home() {
         {/* Input Field (Dibuat agar berada di bawah) */}
         <div className="mt-auto w-full">
           <div>
-            {filename && (
+            {url && (
               <Button
                 variant={"secondary"}
-                onClick={() => handleDownload(filename)}
+                onClick={() => handleDownload()}
                 className="my-5 w-full"
               >
                 Download File

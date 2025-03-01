@@ -23,7 +23,7 @@ type PresentationData = {
   slides: Slide[];
 };
 
-function createPPT(slidesData: PresentationData) {
+export async function createPPT(slidesData: PresentationData) {
   let pptx = new PptxGenJS();
 
   // Set title slide
@@ -85,26 +85,35 @@ function createPPT(slidesData: PresentationData) {
     });
   });
 
-  // Save the PowerPoint file
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[:.]/g, "-")
-    .replace("T", "_")
-    .split("Z")[0];
-  const fileName = `presentations/presentation_${timestamp}.pptx`;
-  const splitting = fileName.split("/");
-  const prefix = splitting[1];
+  // 🔥 Menggunakan "blob" agar bisa di-upload ke API
+  const pptxBlob = await pptx.write({ outputType: "blob" });
 
-  pptx
-    .writeFile({ fileName })
-    .then(() => {
-      console.log(`PowerPoint berhasil disimpan di ${fileName}`);
-    })
-    .catch((err) => {
-      console.error("Gagal menyimpan PowerPoint:", err);
+  // 🔥 Konversi ke File agar bisa dikirim ke API
+  const file = new File([pptxBlob], "presentation.pptx", {
+    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  });
+
+  // 🔥 Upload ke API Next.js
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch("http://localhost:3000/api/upload", {
+      method: "POST",
+      body: formData,
     });
 
-  return prefix;
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Upload failed");
+    }
+    const filename = data.url;
+    console.log(filename);
+    return filename;
+  } catch (error) {
+    console.error("❌ Upload error:", error);
+    return null;
+  }
 }
 
 // Step 1: Define the expected JSON output structure
@@ -189,7 +198,7 @@ async function generateSlides(topic: string) {
       };
     }
 
-    const filename = createPPT(parsedOutput);
+    const filename = await createPPT(parsedOutput);
     return { parsedOutput, filename };
   } catch (error) {
     console.error("Error generating slides:", error);
