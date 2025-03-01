@@ -1,10 +1,10 @@
 import { Storage } from "@google-cloud/storage";
 import path from "path";
 import { NextResponse } from "next/server";
-
+const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS ?? "");
 // Konfigurasi GCS
 const storage = new Storage({
-  keyFilename: path.join(process.cwd(), "service-account.json"),
+  keyFilename: path.join(process.cwd(), credentials),
 });
 
 const bucketName = "saas-jruhub";
