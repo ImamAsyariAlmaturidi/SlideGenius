@@ -10,13 +10,13 @@ interface JsonViewerProps {
 }
 
 const formatValue = (value: any): React.ReactNode => {
-  if (value === null) return <span className="text-json-null">null</span>;
+  if (value === null) return <span className="text-indigo-400">null</span>;
   if (typeof value === "boolean")
-    return <span className="text-json-boolean">{String(value)}</span>;
+    return <span className="text-teal-500">{String(value)}</span>;
   if (typeof value === "number")
-    return <span className="text-json-number">{value}</span>;
+    return <span className="text-amber-500">{value}</span>;
   if (typeof value === "string")
-    return <span className="text-json-string">"{value}"</span>;
+    return <span className="text-emerald-500">"{value}"</span>;
   return <span>{String(value)}</span>;
 };
 
@@ -31,12 +31,12 @@ export function JsonViewer({ data, expanded = false }: JsonViewerProps) {
   };
 
   return (
-    <div className="bg-json-background border border-json-border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between p-2 border-b border-json-border">
+    <div className="bg-gray-100 border border-gray-300 rounded-lg overflow-hidden shadow-md">
+      <div className="flex items-center justify-between p-2 bg-gray-200 border-b border-gray-300">
         <Button
           variant="ghost"
           size="sm"
-          className="text-white hover:bg-gray-800"
+          className="text-gray-700 hover:bg-gray-300"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? (
@@ -49,21 +49,21 @@ export function JsonViewer({ data, expanded = false }: JsonViewerProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-white hover:bg-gray-800"
+          className="text-gray-700 hover:bg-gray-300"
           onClick={copyToClipboard}
         >
           {copied ? "Copied!" : <Copy className="h-4 w-4" />}
         </Button>
       </div>
       {isExpanded && (
-        <div className="p-4 font-mono text-sm text-white max-h-[400px] overflow-auto">
+        <div className="p-4 font-mono text-sm text-gray-800 max-h-[400px] overflow-auto bg-white">
           <JsonTree data={data} level={0} />
         </div>
       )}
 
       {!isExpanded && (
         <div
-          className="p-4 font-mono text-sm text-gray-400 cursor-pointer"
+          className="p-4 font-mono text-sm text-gray-600 cursor-pointer bg-white"
           onClick={() => setIsExpanded(true)}
         >
           Click to expand...
@@ -90,7 +90,7 @@ const JsonTree: React.FC<JsonTreeProps> = ({ data, level }) => {
   return (
     <div className="pl-4">
       <span
-        className="cursor-pointer text-white"
+        className="cursor-pointer text-gray-800"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {isExpanded
@@ -103,19 +103,23 @@ const JsonTree: React.FC<JsonTreeProps> = ({ data, level }) => {
         <div className="pl-4">
           {Object.entries(data).map(([key, value], index, arr) => (
             <div key={key} className="my-1">
-              {!isArray && <span className="text-json-key">"{key}"</span>}
-              {!isArray && <span className="text-white">: </span>}
+              {!isArray && <span className="text-purple-600">"{key}"</span>}
+              {!isArray && <span className="text-gray-800">: </span>}
               {typeof value === "object" && value !== null ? (
                 <JsonTree data={value} level={level + 1} />
               ) : (
                 formatValue(value)
               )}
-              {index < arr.length - 1 && <span className="text-white">,</span>}
+              {index < arr.length - 1 && (
+                <span className="text-gray-800">,</span>
+              )}
             </div>
           ))}
         </div>
       )}
-      {isExpanded && <span className="text-white">{isArray ? "]" : "}"}</span>}
+      {isExpanded && (
+        <span className="text-gray-800">{isArray ? "]" : "}"}</span>
+      )}
     </div>
   );
 };

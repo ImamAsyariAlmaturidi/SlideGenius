@@ -2,13 +2,8 @@
 import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, Heart, Send, Star } from "lucide-react";
+import { Heart, Send, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { main } from "./action/ai";
@@ -36,10 +31,17 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [url, setUrl] = useState<string>("");
+  const [urlLink, setUrlLink] = useState<string>("");
+  const [messages, setMessages] = useState<
+    Array<{ type: "user" | "bot"; content: string }>
+  >([
+    {
+      type: "bot",
+      content: "Hello! What topic do you have on your mind today?",
+    },
+  ]);
   const handleDownload = () => {
-    const url =
-      "https://storage.googleapis.com/saas-jruhub/uploads/1740870873523-presentation.pptx";
+    const url = urlLink;
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", "presentation.pptx"); // Nama file saat didownload
@@ -73,12 +75,12 @@ export default function Home() {
     if (inputPrompt.trim().split(/\s+/).length < 3) {
       return toast.warning("Input must be atleast 3 words!", {
         description:
-          "For the best results, input at least three words with a subject, verb, and object. Example: 'A history about Hitler🗿'",
+          "For the best results, input at least three words with a subject, verb, and object. Example: 'A history about cats'",
         position: "top-center",
         style: {
-          backgroundColor: "green",
-          color: "#000",
-          border: "1px solid black",
+          backgroundColor: "#ffb7c5",
+          color: "#800020",
+          border: "1px solid #ff69b4",
           fontWeight: "bold",
           textAlign: "center",
         },
@@ -92,6 +94,15 @@ export default function Home() {
     const promptValue = inputPrompt;
     setInputPrompt("");
 
+    // Add user message to chat
+    setMessages((prev) => [...prev, { type: "user", content: promptValue }]);
+
+    // Add initial bot response
+    setMessages((prev) => [
+      ...prev,
+      { type: "bot", content: "Generating your presentation..." },
+    ]);
+
     try {
       // Simulate different loading stages for better UX
       setTimeout(() => setLoadingStage("Analyzing topic..."), 1000);
@@ -104,17 +115,26 @@ export default function Home() {
           description: "Prompting failed, please try again",
           position: "top-center",
           style: {
-            backgroundColor: "red",
-            color: "#000",
-            border: "1px solid black",
+            backgroundColor: "#ffb7c5",
+            color: "#800020",
+            border: "1px solid #ff69b4",
             fontWeight: "bold",
             textAlign: "center",
           },
         });
       }
       setResultJson(result.parsedOutput);
+      setMessages((prev) => [
+        ...prev.filter(
+          (msg) => msg.content !== "Generating your presentation..."
+        ),
+        {
+          type: "bot",
+          content: `I've created a presentation on "${promptValue}" with ${result.parsedOutput?.slides.length} slides. You can view the details below and download it.`,
+        },
+      ]);
 
-      setUrl(result.filename);
+      setUrlLink(result.filename);
     } catch (error) {
       console.error("Error generating slides:", error);
     } finally {
@@ -125,7 +145,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-black text-white flex flex-col items-center px-4 py-12">
+    <div className="h-screen bg-pink-50 text-pink-900 flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-3xl flex flex-col flex-grow">
         {/* Header */}
         <Header />
@@ -134,24 +154,30 @@ export default function Home() {
         <FeedbackSection />
 
         {/* Chat Interface */}
-        <ChatMessage message="Hello! What topic do you have on your mind today?" />
+        <div className="flex flex-col space-y-4 mb-6 overflow-y-auto max-h-[50vh]">
+          {messages.map((msg, index) => (
+            <ChatBubble key={index} message={msg.content} type={msg.type} />
+          ))}
+        </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="mb-6 bg-zinc-900 border border-zinc-700 rounded-lg p-6 text-center">
+          <div className="mb-6 bg-pink-100 border border-pink-300 rounded-lg p-6 text-center shadow-md">
             <div className="flex flex-col items-center justify-center space-y-4">
-              <Loader className="border-green-500" size="lg" />
-              <p className="text-zinc-300">{loadingStage}</p>
-              <Progress value={progress} className="w-full max-w-md" />
+              <Loader className="border-pink-500" size="lg" />
+              <p className="text-pink-700">{loadingStage}</p>
+              <Progress
+                value={progress}
+                className="w-full max-w-md bg-pink-200"
+              />
             </div>
           </div>
         )}
 
         {/* JSON Result */}
-
         {resultJson && !loading && (
           <div className="flex flex-col min-h-0">
-            <div className="mb-6 max-h-[400px] overflow-auto  border-zinc-700 rounded-lg">
+            <div className="mb-6 max-h-[400px] overflow-auto border border-pink-300 rounded-lg bg-white shadow-md">
               <JsonViewer data={resultJson} />
             </div>
           </div>
@@ -160,11 +186,11 @@ export default function Home() {
         {/* Input Field (Dibuat agar berada di bawah) */}
         <div className="mt-auto w-full">
           <div>
-            {url && (
+            {urlLink && (
               <Button
                 variant={"secondary"}
                 onClick={() => handleDownload()}
-                className="my-5 w-full"
+                className="my-5 w-full bg-pink-500 hover:bg-pink-600 text-white"
               >
                 Download File
               </Button>
@@ -175,7 +201,7 @@ export default function Home() {
               placeholder="Write the topic or instructions here"
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              className="w-full bg-transparent border-green-800 border rounded-md py-6 px-4 focus-visible:ring-green-500"
+              className="w-full bg-white border-pink-400 border rounded-md py-6 px-4 focus-visible:ring-pink-500 shadow-sm"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -188,16 +214,16 @@ export default function Home() {
               onClick={handlePrompt}
               size="icon"
               disabled={loading || !inputPrompt.trim()}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-transparent ${
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-pink-500 hover:bg-pink-600 ${
                 loading || !inputPrompt.trim()
                   ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-zinc-800"
+                  : ""
               }`}
             >
               {loading ? (
-                <LoadingDots color="bg-green-500" />
+                <LoadingDots color="bg-white" />
               ) : (
-                <Send className="h-5 w-5" />
+                <Send className="h-5 w-5 text-white" />
               )}
             </Button>
           </div>
@@ -210,20 +236,20 @@ export default function Home() {
 const Header = () => (
   <div className="mb-8 text-center">
     <h1 className="text-4xl md:text-5xl font-bold mb-2">
-      <span className="text-green-500">SlideGenius by Imam A'syari</span>{" "}
+      <span className="text-pink-600">SlideGenius by Imam A'syari</span>{" "}
     </h1>
-    <p className="text-xl md:text-2xl mt-4">
+    <p className="text-xl md:text-2xl mt-4 text-pink-700">
       Converse, create, and improve your next PowerPoint by SlideGenius
     </p>
   </div>
 );
 
 const FeedbackSection = () => (
-  <div className="p-2 mb-4 rounded-md bg-green-950 border border-green-900">
-    <p className="text-center">
+  <div className="p-2 mb-4 rounded-md bg-pink-100 border border-pink-300 shadow-sm">
+    <p className="text-center text-pink-800">
       If you like SlideGenius, please consider leaving a heart{" "}
       <Heart className="inline h-5 w-5 text-red-500 fill-red-500" /> on the
-      <Link href="#" className="text-blue-400 hover:underline">
+      <Link href="#" className="text-pink-600 hover:underline">
         {" "}
         Hugging Face Space{" "}
       </Link>
@@ -231,7 +257,7 @@ const FeedbackSection = () => (
       <Star className="inline h-5 w-5 text-yellow-400 fill-yellow-400" /> on
       <Link
         href="https://github.com/ImamAsyariAlmaturidi"
-        className="text-blue-400 hover:underline"
+        className="text-pink-600 hover:underline"
       >
         {" "}
         GitHub{" "}
@@ -239,7 +265,7 @@ const FeedbackSection = () => (
       or checking out my
       <Link
         href="https://www.linkedin.com/in/imam-a-syari-almaturidi-21b885323/"
-        className="text-blue-400 hover:underline"
+        className="text-pink-600 hover:underline"
       >
         {" "}
         LinkedIn{" "}
@@ -249,19 +275,39 @@ const FeedbackSection = () => (
   </div>
 );
 
-const ChatMessage = ({ message }: { message: string }) => (
-  <div className="flex items-start gap-3 mb-8">
-    <div className="bg-green-500 p-2 rounded-md">
+const ChatBubble = ({
+  message,
+  type,
+}: {
+  message: string;
+  type: "user" | "bot";
+}) => (
+  <div
+    className={`flex items-start gap-3 ${
+      type === "user" ? "flex-row-reverse" : ""
+    }`}
+  >
+    <div
+      className={`${
+        type === "bot" ? "bg-pink-400" : "bg-pink-600"
+      } p-2 rounded-full flex-shrink-0 shadow-sm`}
+    >
       <Image
-        src="/placeholder.svg?height=24&width=24"
-        width={24}
-        height={24}
-        alt="Bot icon"
+        src="/bot.png"
+        width={30}
+        height={30}
+        alt={type === "bot" ? "Bot icon" : "User icon"}
         className="h-6 w-6"
       />
     </div>
-    <div className="bg-zinc-900 p-4 rounded-md border border-zinc-700 flex-1">
-      <p>{message}</p>
+    <div
+      className={`p-4 rounded-2xl max-w-[80%] shadow-sm ${
+        type === "bot"
+          ? "bg-white border border-pink-200 rounded-tr-2xl rounded-br-2xl rounded-bl-2xl"
+          : "bg-pink-300 text-pink-900 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
+      }`}
+    >
+      <p className="text-sm md:text-base">{message}</p>
     </div>
   </div>
 );
